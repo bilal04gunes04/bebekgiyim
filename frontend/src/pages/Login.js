@@ -1,0 +1,109 @@
+import React, { useState } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useAuthStore } from '../store/useAuthStore';
+import { Mail, Lock, Eye, EyeOff, Baby } from 'lucide-react';
+import toast from 'react-hot-toast';
+
+export default function Login() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const { login, isLoading } = useAuthStore();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const from = location.state?.from || '/';
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!email || !password) {
+      toast.error('Tüm alanları doldurun');
+      return;
+    }
+    const result = await login(email, password);
+    if (result.success) {
+      toast.success('Hoş geldiniz!');
+      navigate(from);
+    } else {
+      toast.error(result.error || 'Giriş başarısız');
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-baby-lavender px-4">
+      <div className="w-full max-w-md">
+        <div className="bg-white rounded-2xl shadow-xl p-8">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-100 rounded-full mb-4">
+              <Baby className="w-8 h-8 text-primary-500" />
+            </div>
+            <h1 className="text-2xl font-bold text-gray-800">MiniModa</h1>
+            <p className="text-gray-500 mt-1">Hesabınıza giriş yapın</p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">E-posta</label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="ornek@email.com"
+                  className="w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-400 outline-none"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Şifre</label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full pl-10 pr-12 py-3 border rounded-lg focus:ring-2 focus:ring-primary-400 outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between text-sm">
+              <label className="flex items-center gap-2">
+                <input type="checkbox" className="rounded text-primary-500" />
+                <span className="text-gray-600">Beni hatırla</span>
+              </label>
+              <Link to="/sifremi-unuttum" className="text-primary-500 hover:text-primary-600">
+                Şifremi unuttum
+              </Link>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full btn-primary py-3 text-lg disabled:opacity-50"
+            >
+              {isLoading ? 'Giriş yapılıyor...' : 'Giriş Yap'}
+            </button>
+          </form>
+
+          <p className="text-center mt-6 text-gray-600">
+            Hesabınız yok mu?{' '}
+            <Link to="/kayit" className="text-primary-500 hover:text-primary-600 font-medium">
+              Hemen kaydolun
+            </Link>
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
