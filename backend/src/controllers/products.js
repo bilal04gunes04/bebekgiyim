@@ -249,7 +249,7 @@ exports.createProduct = async (req, res, next) => {
         const {
             name, description, shortDescription, categoryId, brandId,
             basePrice, salePrice, costPrice, sku, barcode, weightKg,
-            taxRate, stockQuantity, isFeatured, isNewArrival, metaTitle, metaDescription, variants
+            taxRate, stockQuantity, isFeatured, isNewArrival, metaTitle, metaDescription, variants, imageUrl
         } = req.body;
 
         const slug = slugify(name, { lower: true, strict: true }) + '-' + Date.now();
@@ -273,7 +273,7 @@ exports.createProduct = async (req, res, next) => {
             }
         }
 
-        // Görselleri ekle
+        // Görselleri ekle (dosya yükleme)
         if (req.files && req.files.length > 0) {
             for (let i = 0; i < req.files.length; i++) {
                 await query(
@@ -281,6 +281,14 @@ exports.createProduct = async (req, res, next) => {
                     [product.id, `/uploads/products/${req.files[i].filename}`, name, i, i === 0]
                 );
             }
+        }
+
+        // Görsel URL'si ile ekle
+        if (imageUrl) {
+            await query(
+                'INSERT INTO product_images (product_id, image_url, alt_text, sort_order, is_primary) VALUES ($1, $2, $3, $4, $5)',
+                [product.id, imageUrl, name, 0, true]
+            );
         }
 
         res.status(201).json({ success: true, data: product });
@@ -296,34 +304,64 @@ exports.updateProduct = async (req, res, next) => {
         const { id } = req.params;
         const updates = req.body;
 
-        const allowedFields = ['name', 'description', 'short_description', 'category_id', 'brand_id', 'base_price', 'sale_price', 'cost_price', 'sku', 'barcode', 'weight_kg', 'tax_rate', 'stock_quantity', 'is_featured', 'is_new_arrival', 'is_active', 'meta_title', 'meta_description'];
+        // Frontend camelCase alanları veritabanı snake_case kolonlarına eşler
+        const fieldMap = {
+            name: 'name', description: 'description', shortDescription: 'short_description',
+            categoryId: 'category_id', brandId: 'brand_id', basePrice: 'base_price',
+            salePrice: 'sale_price', costPrice: 'cost_price', sku: 'sku', barcode: 'barcode',
+            weightKg: 'weight_kg', taxRate: 'tax_rate', stockQuantity: 'stock_quantity',
+            isFeatured: 'is_featured', isNewArrival: 'is_new_arrival', isActive: 'is_active',
+            metaTitle: 'meta_title', metaDescription: 'meta_description'
+        };
         const setClauses = [];
         const values = [];
         let index = 1;
 
         for (const [key, value] of Object.entries(updates)) {
-            if (allowedFields.includes(key)) {
-                setClauses.push(`${key} = $${index}`);
-                values.push(value);
+            const column = fieldMap[key];
+            if (column) {
+                setClauses.push(`${column} = $${index}`);
+                values.push(value === '' ? null : value);
                 index++;
             }
         }
 
-        if (setClauses.length === 0) {
-            return res.status(400).json({ success: false, message: 'Güncellenecek alan bulunamadı' });
+        let product;
+        if (setClauses.length > 0) {
+            values.push(id);
+            const result = await query(
+                `UPDATE products SET ${setClauses.join(', ')}, updated_at = NOW() WHERE id = $${index} RETURNING *`,
+                values
+            );
+
+            if (result.rows.length === 0) {
+                return res.status(404).json({ success: false, message: 'Ürün bulunamadı' });
+            }
+            product = result.rows[0];
         }
 
-        values.push(id);
-        const result = await query(
-            `UPDATE products SET ${setClauses.join(', ')}, updated_at = NOW() WHERE id = $${index} RETURNING *`,
-            values
-        );
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({ success: false, message: 'Ürün bulunamadı' });
+        // Görsel URL'si güncelle (varsa mevcut ana görseli güncelle, yoksa ekle)
+        if (updates.imageUrl) {
+            const existing = await query('SELECT id FROM product_images WHERE product_id = $1 AND is_primary = true LIMIT 1', [id]);
+            if (existing.rows.length > 0) {
+                await query('UPDATE product_images SET image_url = $1 WHERE id = $2', [updates.imageUrl, existing.rows[0].id]);
+            } else {
+                await query(
+                    'INSERT INTO product_images (product_id, image_url, alt_text, sort_order, is_primary) VALUES ($1, $2, $3, $4, $5)',
+                    [id, updates.imageUrl, updates.name || '', 0, true]
+                );
+            }
         }
 
-        res.json({ success: true, data: result.rows[0] });
+        if (!product) {
+            const result = await query('SELECT * FROM products WHERE id = $1', [id]);
+            if (result.rows.length === 0) {
+                return res.status(404).json({ success: false, message: 'Ürün bulunamadı' });
+            }
+            product = result.rows[0];
+        }
+
+        res.json({ success: true, data: product });
     } catch (error) {
         next(error);
     }

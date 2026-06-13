@@ -15,7 +15,7 @@ export default function AdminProducts() {
   const [showModal, setShowModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [formData, setFormData] = useState({
-    name: '', description: '', basePrice: '', salePrice: '', categoryId: '', brandId: '', stockQuantity: '', sku: '', isFeatured: false, isNewArrival: false, isActive: true
+    name: '', description: '', basePrice: '', salePrice: '', categoryId: '', brandId: '', stockQuantity: '', sku: '', imageUrl: '', isFeatured: false, isNewArrival: false, isActive: true
   });
 
   useEffect(() => {
@@ -76,6 +76,7 @@ export default function AdminProducts() {
       brandId: product.brand_id || '',
       stockQuantity: product.stock_quantity,
       sku: product.sku || '',
+      imageUrl: product.primary_image || '',
       isFeatured: product.is_featured,
       isNewArrival: product.is_new_arrival,
       isActive: product.is_active,
@@ -85,7 +86,7 @@ export default function AdminProducts() {
 
   const openCreateModal = () => {
     setEditingProduct(null);
-    setFormData({ name: '', description: '', basePrice: '', salePrice: '', categoryId: '', brandId: '', stockQuantity: '', sku: '', isFeatured: false, isNewArrival: false, isActive: true });
+    setFormData({ name: '', description: '', basePrice: '', salePrice: '', categoryId: '', brandId: '', stockQuantity: '', sku: '', imageUrl: '', isFeatured: false, isNewArrival: false, isActive: true });
     setShowModal(true);
   };
 
@@ -219,6 +220,14 @@ export default function AdminProducts() {
                 <div>
                   <label className="block text-sm font-medium mb-1">Stok</label>
                   <input type="number" value={formData.stockQuantity} onChange={(e) => setFormData({...formData, stockQuantity: e.target.value})} className="w-full px-3 py-2 border rounded-lg" required />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium mb-1">Görsel URL</label>
+                  <input type="text" placeholder="https://ornek.com/gorsel.jpg" value={formData.imageUrl} onChange={(e) => setFormData({...formData, imageUrl: e.target.value})} className="w-full px-3 py-2 border rounded-lg" />
+                  <p className="text-xs text-gray-400 mt-1">Görseli imgur.com, postimages.org gibi bir siteye yükleyip linkini buraya yapıştırabilirsiniz.</p>
+                  {formData.imageUrl && (
+                    <img src={formData.imageUrl} alt="Önizleme" className="mt-2 w-20 h-20 object-cover rounded-lg border" onError={(e) => e.target.style.display = 'none'} />
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">SKU</label>
