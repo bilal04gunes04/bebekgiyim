@@ -12,6 +12,41 @@ export default function AdminProducts() {
   const [variants, setVariants] = useState([]);
   const [newVariant, setNewVariant] = useState({ size: '', color: '', color_hex: '#000000', stock_quantity: 0 });
   const [showVariants, setShowVariants] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
+
+  const CLOUDINARY_CLOUD = 'dvxva8bzy';
+  const CLOUDINARY_PRESET = 'minimoda_uploads';
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { toast.error('Lütfen bir resim dosyası seçin'); return; }
+    if (file.size > 5 * 1024 * 1024) { toast.error('Dosya boyutu 5MB\'dan küçük olmalı'); return; }
+
+    setImageUploading(true);
+    try {
+      const data = new FormData();
+      data.append('file', file);
+      data.append('upload_preset', CLOUDINARY_PRESET);
+      data.append('folder', 'minimoda');
+
+      const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`, {
+        method: 'POST',
+        body: data,
+      });
+      const result = await res.json();
+      if (result.secure_url) {
+        setFormData(prev => ({ ...prev, imageUrl: result.secure_url }));
+        toast.success('Görsel yüklendi!');
+      } else {
+        throw new Error(result.error?.message || 'Yükleme başarısız');
+      }
+    } catch (err) {
+      toast.error('Görsel yüklenemedi: ' + err.message);
+    } finally {
+      setImageUploading(false);
+    }
+  };
   const [pagination, setPagination] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -274,12 +309,49 @@ export default function AdminProducts() {
                   <input type="number" value={formData.stockQuantity} onChange={(e) => setFormData({...formData, stockQuantity: e.target.value})} className="w-full px-3 py-2 border rounded-lg" required />
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-sm font-medium mb-1">Görsel URL</label>
-                  <input type="text" placeholder="https://ornek.com/gorsel.jpg" value={formData.imageUrl} onChange={(e) => setFormData({...formData, imageUrl: e.target.value})} className="w-full px-3 py-2 border rounded-lg" />
-                  <p className="text-xs text-gray-400 mt-1">Görseli imgur.com, postimages.org gibi bir siteye yükleyip linkini buraya yapıştırabilirsiniz.</p>
-                  {formData.imageUrl && (
-                    <img src={formData.imageUrl} alt="Önizleme" className="mt-2 w-20 h-20 object-cover rounded-lg border" onError={(e) => e.target.style.display = 'none'} />
-                  )}
+                  <label className="block text-sm font-medium mb-1">Ürün Görseli</label>
+                  <div
+                    className={`relative border-2 border-dashed rounded-lg p-4 text-center transition-colors ${imageUploading ? 'border-pink-300 bg-pink-50' : 'border-gray-300 hover:border-pink-400 cursor-pointer'}`}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handleImageUpload({ target: { files: [f] } }); }}
+                    onClick={() => !imageUploading && document.getElementById('cloudinary-upload').click()}
+                  >
+                    <input id="cloudinary-upload" type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                    {imageUploading ? (
+                      <div className="py-4">
+                        <div className="w-8 h-8 border-4 border-pink-500 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                        <p className="text-sm text-pink-600">Yükleniyor...</p>
+                      </div>
+                    ) : formData.imageUrl ? (
+                      <div className="relative inline-block">
+                        <img src={formData.imageUrl} alt="Önizleme" className="w-32 h-32 object-cover rounded-lg mx-auto" />
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); setFormData(p => ({ ...p, imageUrl: '' })); }}
+                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"
+                        >✕</button>
+                        <p className="text-xs text-gray-400 mt-2">Değiştirmek için tıklayın</p>
+                      </div>
+                    ) : (
+                      <div className="py-4">
+                        <div className="text-4xl mb-2">🖼️</div>
+                        <p className="text-sm font-medium text-gray-600">Resim yüklemek için tıklayın</p>
+                        <p className="text-xs text-gray-400 mt-1">veya sürükleyip bırakın</p>
+                        <p className="text-xs text-gray-300 mt-1">PNG, JPG, WEBP — maks. 5MB</p>
+                      </div>
+                    )}
+                  </div>
+                  {/* URL ile de eklenebilir */}
+                  <div className="mt-2 flex gap-2 items-center">
+                    <span className="text-xs text-gray-400">veya URL ile:</span>
+                    <input
+                      type="text"
+                      placeholder="https://..."
+                      value={formData.imageUrl}
+                      onChange={(e) => setFormData({...formData, imageUrl: e.target.value})}
+                      className="flex-1 px-2 py-1 border rounded text-xs"
+                    />
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">SKU</label>
