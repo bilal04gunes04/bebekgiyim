@@ -567,3 +567,30 @@ exports.getCustomerReport = async (req, res, next) => {
         next(error);
     }
 };
+
+// @desc    Sipariş durumu güncelle
+// @route   PUT /api/admin/orders/:id/status
+exports.updateOrderStatus = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+
+        const validStatuses = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded'];
+        if (!status || !validStatuses.includes(status)) {
+            return res.status(400).json({ success: false, message: 'Geçersiz durum değeri' });
+        }
+
+        const result = await query(
+            'UPDATE orders SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
+            [status, id]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Sipariş bulunamadı' });
+        }
+
+        res.json({ success: true, data: result.rows[0], message: 'Sipariş durumu güncellendi' });
+    } catch (error) {
+        next(error);
+    }
+};

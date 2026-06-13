@@ -6,6 +6,7 @@ const {
     getUsers,
     updateUserRole,
     getAllOrders,
+    updateOrderStatus,
     getAllProducts,
     getAllCategories,
     getAllBrands,
@@ -47,6 +48,7 @@ router.put('/users/:id/role', updateUserRole);
 
 // Siparişler
 router.get('/orders', getAllOrders);
+router.put('/orders/:id/status', updateOrderStatus);
 
 // Ürünler
 router.get('/products', getAllProducts);
