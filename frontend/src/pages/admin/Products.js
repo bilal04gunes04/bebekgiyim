@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { adminService } from '../../services/adminService';
+import api from '../../utils/api';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import Pagination from '../../components/ui/Pagination';
 import { Search, Plus, Edit2, Trash2, Eye, Package, Filter } from 'lucide-react';
@@ -8,6 +9,9 @@ import toast from 'react-hot-toast';
 export default function AdminProducts() {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [variants, setVariants] = useState([]);
+  const [newVariant, setNewVariant] = useState({ size: '', color: '', color_hex: '#000000', stock_quantity: 0 });
+  const [showVariants, setShowVariants] = useState(false);
   const [pagination, setPagination] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -95,13 +99,47 @@ export default function AdminProducts() {
       isNewArrival: product.is_new_arrival,
       isActive: product.is_active,
     });
+    // Mevcut varyantları yükle
+    api.get(`/products/${product.id}/variants`).then(res => setVariants(res.data.data || [])).catch(() => setVariants([]));
+    setShowVariants(true);
     setShowModal(true);
   };
 
   const openCreateModal = () => {
     setEditingProduct(null);
+    setVariants([]);
+    setShowVariants(false);
+    setNewVariant({ size: '', color: '', color_hex: '#000000', stock_quantity: 0 });
     setFormData({ name: '', description: '', basePrice: '', salePrice: '', categoryId: '', brandId: '', stockQuantity: '', sku: '', imageUrl: '', isFeatured: false, isNewArrival: false, isActive: true });
     setShowModal(true);
+  };
+
+  const handleAddVariant = async () => {
+    if (!editingProduct) { toast.error('Önce ürünü kaydedin, sonra varyant ekleyin'); return; }
+    if (!newVariant.size || !newVariant.color) { toast.error('Beden ve renk zorunludur'); return; }
+    try {
+      const res = await api.post(`/products/${editingProduct.id}/variants`, newVariant);
+      setVariants(prev => [...prev, res.data.data]);
+      setNewVariant({ size: '', color: '', color_hex: '#000000', stock_quantity: 0 });
+      toast.success('Varyant eklendi');
+    } catch { toast.error('Varyant eklenemedi'); }
+  };
+
+  const handleDeleteVariant = async (variantId) => {
+    if (!editingProduct) return;
+    try {
+      await api.delete(`/products/${editingProduct.id}/variants/${variantId}`);
+      setVariants(prev => prev.filter(v => v.id !== variantId));
+      toast.success('Varyant silindi');
+    } catch { toast.error('Silinemedi'); }
+  };
+
+  const handleVariantStockChange = async (variantId, newStock) => {
+    if (!editingProduct) return;
+    try {
+      const res = await api.put(`/products/${editingProduct.id}/variants/${variantId}`, { stock_quantity: parseInt(newStock) });
+      setVariants(prev => prev.map(v => v.id === variantId ? res.data.data : v));
+    } catch { toast.error('Stok güncellenemedi'); }
   };
 
   return (
@@ -281,6 +319,96 @@ export default function AdminProducts() {
                 <button type="button" onClick={() => setShowModal(false)} className="flex-1 btn-outline py-2">İptal</button>
               </div>
             </form>
+
+            {/* Varyant Yönetimi - form dışında, sadece düzenleme modunda */}
+            {editingProduct && (
+              <div className="mt-6 border-t pt-6">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-semibold text-lg">Beden / Renk Varyantları</h3>
+                    <button type="button" onClick={() => setShowVariants(v => !v)} className="text-sm text-pink-600 hover:underline">
+                      {showVariants ? 'Gizle' : 'Göster'} ({variants.length})
+                    </button>
+                  </div>
+
+                  {showVariants && (
+                    <>
+                      {/* Mevcut varyantlar */}
+                      {variants.length > 0 && (
+                        <div className="mb-4 space-y-2">
+                          {variants.map(v => (
+                            <div key={v.id} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg text-sm">
+                              <span style={{ background: v.color_hex || '#ccc' }} className="w-5 h-5 rounded-full border flex-shrink-0" />
+                              <span className="font-medium w-24 truncate">{v.color}</span>
+                              <span className="bg-pink-100 text-pink-700 px-2 py-0.5 rounded text-xs font-medium">{v.size}</span>
+                              <span className="text-gray-500 text-xs ml-auto mr-2">Stok:</span>
+                              <input
+                                type="number" min="0"
+                                defaultValue={v.stock_quantity}
+                                onBlur={(e) => handleVariantStockChange(v.id, e.target.value)}
+                                className="w-16 px-2 py-1 border rounded text-center text-sm"
+                              />
+                              <button type="button" onClick={() => handleDeleteVariant(v.id)} className="text-red-400 hover:text-red-600 ml-1">✕</button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Yeni varyant ekle */}
+                      <div className="bg-blue-50 p-3 rounded-lg">
+                        <p className="text-xs font-medium text-blue-700 mb-2">Yeni Varyant Ekle</p>
+                        <div className="grid grid-cols-2 gap-2 mb-2">
+                          <div>
+                            <label className="text-xs text-gray-600 mb-1 block">Beden</label>
+                            <input
+                              type="text" placeholder="örn: S, M, 0-3 Ay, 3-6 Ay"
+                              value={newVariant.size}
+                              onChange={e => setNewVariant(p => ({ ...p, size: e.target.value }))}
+                              className="w-full px-2 py-1.5 border rounded text-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs text-gray-600 mb-1 block">Renk Adı</label>
+                            <input
+                              type="text" placeholder="örn: Mavi, Kırmızı"
+                              value={newVariant.color}
+                              onChange={e => setNewVariant(p => ({ ...p, color: e.target.value }))}
+                              className="w-full px-2 py-1.5 border rounded text-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs text-gray-600 mb-1 block">Renk</label>
+                            <input
+                              type="color"
+                              value={newVariant.color_hex}
+                              onChange={e => setNewVariant(p => ({ ...p, color_hex: e.target.value }))}
+                              className="w-full h-9 border rounded cursor-pointer"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs text-gray-600 mb-1 block">Stok</label>
+                            <input
+                              type="number" min="0"
+                              value={newVariant.stock_quantity}
+                              onChange={e => setNewVariant(p => ({ ...p, stock_quantity: parseInt(e.target.value) || 0 }))}
+                              className="w-full px-2 py-1.5 border rounded text-sm"
+                            />
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleAddVariant}
+                          className="w-full py-1.5 bg-blue-600 text-white rounded text-sm font-medium hover:bg-blue-700"
+                        >
+                          + Varyant Ekle
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+              {!editingProduct && (
+                <p className="text-xs text-gray-400 mt-2 text-center">💡 Ürünü oluşturduktan sonra düzenleme ekranından varyant ekleyebilirsiniz.</p>
+              )}
           </div>
         </div>
       )}

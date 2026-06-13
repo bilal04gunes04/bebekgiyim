@@ -11,7 +11,11 @@ const {
     updateProduct,
     deleteProduct,
     getProductReviews,
-    addReview
+    addReview,
+    getVariants,
+    createVariant,
+    updateVariant,
+    deleteVariant
 } = require('../controllers/products');
 const { protect, adminOnly } = require('../middleware/auth');
 const upload = require('../middleware/upload');
@@ -37,5 +41,11 @@ router.post('/:id/reviews', protect, [
 router.post('/', protect, adminOnly, upload.array('images', 10), createProduct);
 router.put('/:id', protect, adminOnly, upload.array('images', 10), updateProduct);
 router.delete('/:id', protect, adminOnly, deleteProduct);
+
+// Varyant routes
+router.get('/:id/variants', getVariants);
+router.post('/:id/variants', protect, adminOnly, createVariant);
+router.put('/:id/variants/:variantId', protect, adminOnly, updateVariant);
+router.delete('/:id/variants/:variantId', protect, adminOnly, deleteVariant);
 
 module.exports = router;

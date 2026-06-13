@@ -447,3 +447,79 @@ exports.addReview = async (req, res, next) => {
         next(error);
     }
 };
+
+// ─────────────────────────────────────────
+// VARYANT YÖNETİMİ
+// ─────────────────────────────────────────
+
+// @desc    Ürünün varyantlarını getir
+// @route   GET /api/products/:id/variants
+exports.getVariants = async (req, res, next) => {
+    try {
+        const result = await query(
+            'SELECT * FROM product_variants WHERE product_id = $1 ORDER BY color, size',
+            [req.params.id]
+        );
+        res.json({ success: true, data: result.rows });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// @desc    Varyant ekle
+// @route   POST /api/products/:id/variants
+exports.createVariant = async (req, res, next) => {
+    try {
+        const { size, color, color_hex, stock_quantity, sku } = req.body;
+        if (!size || !color) {
+            return res.status(400).json({ success: false, message: 'Beden ve renk zorunludur' });
+        }
+        const result = await query(
+            `INSERT INTO product_variants (product_id, size, color, color_hex, stock_quantity, sku)
+             VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+            [req.params.id, size.trim(), color.trim(), color_hex || null, stock_quantity || 0, sku || null]
+        );
+        res.status(201).json({ success: true, data: result.rows[0] });
+    } catch (error) {
+        if (error.code === '23505') {
+            return res.status(400).json({ success: false, message: 'Bu SKU zaten kullanımda' });
+        }
+        next(error);
+    }
+};
+
+// @desc    Varyant güncelle
+// @route   PUT /api/products/:id/variants/:variantId
+exports.updateVariant = async (req, res, next) => {
+    try {
+        const { size, color, color_hex, stock_quantity, sku, is_active } = req.body;
+        const result = await query(
+            `UPDATE product_variants
+             SET size = COALESCE($1, size),
+                 color = COALESCE($2, color),
+                 color_hex = COALESCE($3, color_hex),
+                 stock_quantity = COALESCE($4, stock_quantity),
+                 sku = COALESCE($5, sku),
+                 is_active = COALESCE($6, is_active)
+             WHERE id = $7 AND product_id = $8 RETURNING *`,
+            [size, color, color_hex, stock_quantity, sku, is_active, req.params.variantId, req.params.id]
+        );
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Varyant bulunamadı' });
+        }
+        res.json({ success: true, data: result.rows[0] });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// @desc    Varyant sil
+// @route   DELETE /api/products/:id/variants/:variantId
+exports.deleteVariant = async (req, res, next) => {
+    try {
+        await query('DELETE FROM product_variants WHERE id = $1 AND product_id = $2', [req.params.variantId, req.params.id]);
+        res.json({ success: true, message: 'Varyant silindi' });
+    } catch (error) {
+        next(error);
+    }
+};
