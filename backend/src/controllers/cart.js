@@ -27,13 +27,10 @@ exports.getCart = async (req, res, next) => {
         const freeShippingThreshold = parseFloat(settingsResult.rows[0]?.value || 250);
         const shippingCost = subtotal >= freeShippingThreshold ? 0 : 29.90;
 
-        // Kupon kontrolü
-        const couponResult = await query(
-            'SELECT coupon_code, discount_amount FROM cart_items WHERE user_id = $1 AND coupon_code IS NOT NULL LIMIT 1',
-            [req.user.id]
-        );
-        const coupon = couponResult.rows[0] || null;
-        const discountAmount = coupon ? parseFloat(coupon.discount_amount) : 0;
+        // Not: Kupon bilgisi şu an cart_items tablosunda saklanmıyor, bu yüzden
+        // sabit olarak "kupon yok" kabul ediyoruz.
+        const coupon = null;
+        const discountAmount = 0;
 
         const total = subtotal + shippingCost - discountAmount;
 
