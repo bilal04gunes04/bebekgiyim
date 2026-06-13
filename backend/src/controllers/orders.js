@@ -70,12 +70,16 @@ exports.createOrder = async (req, res, next) => {
         const taxAmount = (subtotal - discountAmount) * 0.18; // %18 KDV
         const totalAmount = subtotal + shippingCost + taxAmount - discountAmount;
 
+        // Benzersiz sipariş numarası üret (örn: ORD-1718289123456-482)
+        const orderNumber = `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
         // Sipariş oluştur
         const orderResult = await query(
-            `INSERT INTO orders (user_id, status, payment_status, payment_method, shipping_address, billing_address, subtotal, shipping_cost, discount_amount, tax_amount, total_amount, notes)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+            `INSERT INTO orders (order_number, user_id, status, payment_status, payment_method, shipping_address, billing_address, subtotal, shipping_cost, discount_amount, tax_amount, total_amount, notes)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
              RETURNING *`,
             [
+                orderNumber,
                 req.user.id,
                 'pending',
                 paymentMethod === 'cod' ? 'pending' : 'pending',
