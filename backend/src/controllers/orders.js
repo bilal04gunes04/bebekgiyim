@@ -1,4 +1,5 @@
 const { query } = require('../config/database');
+const { sendOrderConfirmation } = require('../services/emailService');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 // @desc    Sipariş oluştur
@@ -132,6 +133,16 @@ exports.createOrder = async (req, res, next) => {
 
         // Sipariş durum geçmişi
         await query('INSERT INTO order_status_history (order_id, status, note, created_by) VALUES ($1, $2, $3, $4)', [order.id, 'pending', 'Sipariş oluşturuldu', req.user.id]);
+
+        // Sipariş onayı e-postası gönder (hata sipariş akışını engellemesin)
+        const userResult = await query('SELECT first_name, email FROM users WHERE id = $1', [req.user.id]);
+        const orderItemsResult = await query('SELECT product_name, quantity, unit_price FROM order_items WHERE order_id = $1', [order.id]);
+        sendOrderConfirmation(
+            req.user.email,
+            order,
+            orderItemsResult.rows,
+            userResult.rows[0] || {}
+        );
 
         res.status(201).json({ success: true, data: order, message: 'Siparişiniz başarıyla oluşturuldu' });
     } catch (error) {

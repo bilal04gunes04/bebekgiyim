@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 const { validationResult } = require('express-validator');
 const { query } = require('../config/database');
 const crypto = require('crypto');
-const nodemailer = require('nodemailer');
+const { sendPasswordReset } = require('../services/emailService');
 
 const generateToken = (id) => {
     return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '7d' });
@@ -164,8 +164,8 @@ exports.forgotPassword = async (req, res, next) => {
             [resetToken, resetTokenExpiry, result.rows[0].id]
         );
 
-        // E-posta gönderimi (örnek)
-        // await sendResetEmail(email, resetToken);
+        // Şifre sıfırlama e-postası gönder
+        await sendPasswordReset(email, resetToken);
 
         res.json({ success: true, message: 'Şifre sıfırlama bağlantısı e-posta adresinize gönderildi' });
     } catch (error) {
