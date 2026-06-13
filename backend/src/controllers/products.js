@@ -254,11 +254,17 @@ exports.createProduct = async (req, res, next) => {
 
         const slug = slugify(name, { lower: true, strict: true }) + '-' + Date.now();
 
+        // Boş string olarak gelen opsiyonel alanları null'a çevir (integer/numeric kolonlar için gerekli)
+        const safeCategoryId = categoryId || null;
+        const safeBrandId = brandId || null;
+        const safeSalePrice = (salePrice === '' || salePrice === undefined) ? null : salePrice;
+        const safeCostPrice = (costPrice === '' || costPrice === undefined) ? null : costPrice;
+
         const result = await query(
             `INSERT INTO products (name, slug, description, short_description, category_id, brand_id, base_price, sale_price, cost_price, sku, barcode, weight_kg, tax_rate, stock_quantity, is_featured, is_new_arrival, meta_title, meta_description)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
              RETURNING *`,
-            [name, slug, description, shortDescription, categoryId, brandId, basePrice, salePrice || null, costPrice || null, sku || null, barcode || null, weightKg || 0, taxRate || 18, stockQuantity || 0, isFeatured || false, isNewArrival || false, metaTitle || null, metaDescription || null]
+            [name, slug, description, shortDescription || null, safeCategoryId, safeBrandId, basePrice, safeSalePrice, safeCostPrice, sku || null, barcode || null, weightKg || 0, taxRate || 18, stockQuantity || 0, isFeatured || false, isNewArrival || false, metaTitle || null, metaDescription || null]
         );
 
         const product = result.rows[0];
