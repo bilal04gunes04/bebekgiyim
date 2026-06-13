@@ -1,14 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCartStore } from '../store/useCartStore';
-import { useAuthStore } from '../store/useAuthStore';
 import { orderService } from '../services/orderService';
+import api from '../utils/api';
 import { CreditCard, Truck, MapPin, ChevronRight, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function Checkout() {
   const { items, summary, clearCart } = useCartStore();
-  const { user } = useAuthStore();
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
@@ -19,8 +18,24 @@ export default function Checkout() {
     couponCode: '',
   });
 
-  // Demo adresler (gerçekte API'den çekilir)
-  const [addresses] = useState(user?.addresses || []);
+  const [addresses, setAddresses] = useState([]);
+
+  useEffect(() => {
+    const fetchAddresses = async () => {
+      try {
+        const response = await api.get('/users/addresses');
+        const list = response.data.data || [];
+        setAddresses(list);
+        const defaultAddr = list.find(a => a.is_default) || list[0];
+        if (defaultAddr) {
+          setOrderData(prev => ({ ...prev, shippingAddressId: String(defaultAddr.id) }));
+        }
+      } catch (error) {
+        toast.error('Adresler yüklenemedi');
+      }
+    };
+    fetchAddresses();
+  }, []);
 
   const handlePlaceOrder = async () => {
     if (!orderData.shippingAddressId) {
