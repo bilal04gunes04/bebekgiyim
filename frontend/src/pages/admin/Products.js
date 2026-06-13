@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 
 export default function AdminProducts() {
   const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [pagination, setPagination] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -21,6 +22,19 @@ export default function AdminProducts() {
   useEffect(() => {
     fetchProducts();
   }, [page, status, search]);
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const response = await adminService.getAllCategories();
+      setCategories(response.data.data || []);
+    } catch (error) {
+      // Kategoriler yüklenemese de ürün formu kategori seçimsiz çalışabilir
+    }
+  };
 
   const fetchProducts = async () => {
     try {
@@ -232,6 +246,20 @@ export default function AdminProducts() {
                 <div>
                   <label className="block text-sm font-medium mb-1">SKU</label>
                   <input type="text" value={formData.sku} onChange={(e) => setFormData({...formData, sku: e.target.value})} className="w-full px-3 py-2 border rounded-lg" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Kategori</label>
+                  <select value={formData.categoryId} onChange={(e) => setFormData({...formData, categoryId: e.target.value})} className="w-full px-3 py-2 border rounded-lg">
+                    <option value="">Kategori Seçin</option>
+                    {categories.filter(c => !c.parent_id).map(parent => (
+                      <optgroup key={parent.id} label={parent.name}>
+                        <option value={parent.id}>{parent.name}</option>
+                        {categories.filter(c => c.parent_id === parent.id).map(sub => (
+                          <option key={sub.id} value={sub.id}>— {sub.name}</option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  </select>
                 </div>
                 <div className="col-span-2 flex gap-4">
                   <label className="flex items-center gap-2">
