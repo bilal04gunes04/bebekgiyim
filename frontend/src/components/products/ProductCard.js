@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Heart, ShoppingCart } from 'lucide-react';
+import { Heart, ShoppingCart, ImageOff } from 'lucide-react';
 import { useCartStore } from '../../store/useCartStore';
 import toast from 'react-hot-toast';
 
@@ -32,9 +32,8 @@ export default function ProductCard({ product }) {
               loading="lazy"
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-6xl bg-gradient-to-br from-primary-100 to-baby-blue">
-              {product.category_slug?.includes('bebek') ? '👶' : 
-               product.category_slug?.includes('kiz') ? '👧' : '👦'}
+            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary-100 to-baby-blue">
+              <ImageOff className="w-10 h-10 text-primary-300" />
             </div>
           )}
 

@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/useAuthStore';
 import { useCartStore } from '../store/useCartStore';
 import api from '../utils/api';
-import { Heart, ShoppingCart, Trash2, ArrowRight } from 'lucide-react';
+import { Heart, ShoppingCart, Trash2, ArrowRight, ImageOff } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function Wishlist() {
@@ -88,7 +88,7 @@ export default function Wishlist() {
                   {item.image ? (
                     <img src={item.image} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-6xl">👕</div>
+                    <div className="w-full h-full flex items-center justify-center"><ImageOff className="w-10 h-10 text-gray-300" /></div>
                   )}
                 </div>
                 <div className="p-4">

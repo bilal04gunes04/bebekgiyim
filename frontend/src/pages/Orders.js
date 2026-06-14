@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../store/useAuthStore';
 import { useNavigate, Link } from 'react-router-dom';
 import { orderService } from '../services/orderService';
-import { Package, Truck, CheckCircle, Clock, XCircle, ChevronRight, Eye } from 'lucide-react';
+import { Package, Truck, CheckCircle, Clock, XCircle, ChevronRight, Eye, ImageOff } from 'lucide-react';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import toast from 'react-hot-toast';
 
@@ -115,8 +115,8 @@ export default function Orders() {
                     {(order.items || []).slice(0, 3).map((item, idx) => (
                       <div key={idx} className="flex items-center justify-between text-sm">
                         <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-lg">
-                            👕
+                          <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
+                            <ImageOff className="w-5 h-5 text-gray-300" />
                           </div>
                           <div>
                             <p className="font-medium">{item.productName}</p>

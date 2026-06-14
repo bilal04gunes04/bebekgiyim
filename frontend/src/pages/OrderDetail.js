@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { orderService } from '../services/orderService';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
-import { Package, Truck, CheckCircle, Clock, XCircle, MapPin, CreditCard, ChevronLeft, AlertCircle } from 'lucide-react';
+import { Package, Truck, CheckCircle, Clock, XCircle, MapPin, CreditCard, ChevronLeft, AlertCircle, ImageOff, Phone, Wallet, Clock3 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const statusConfig = {
@@ -174,8 +174,8 @@ export default function OrderDetail() {
           <div className="space-y-3">
             {(order.items || []).map((item, idx) => (
               <div key={idx} className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl">
-                <div className="w-14 h-14 bg-white rounded-lg flex items-center justify-center text-2xl shadow-sm">
-                  👕
+                <div className="w-14 h-14 bg-white rounded-lg flex items-center justify-center shadow-sm">
+                  <ImageOff className="w-6 h-6 text-gray-300" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-medium truncate">{item.productName}</p>
@@ -211,7 +211,7 @@ export default function OrderDetail() {
                   {shippingAddress.neighborhood && `${shippingAddress.neighborhood}, `}
                   {shippingAddress.district}, {shippingAddress.city}
                 </p>
-                {shippingAddress.phone && <p>📞 {shippingAddress.phone}</p>}
+                {shippingAddress.phone && <p className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" /> {shippingAddress.phone}</p>}
               </div>
             )}
           </div>
@@ -224,12 +224,14 @@ export default function OrderDetail() {
             <div className="text-sm text-gray-600 space-y-2 bg-gray-50 p-4 rounded-lg">
               <div className="flex justify-between">
                 <span className="text-gray-500">Yöntem</span>
-                <span className="font-medium">{order.payment_method === 'cod' ? '🚪 Kapıda Ödeme' : '💳 Kredi Kartı'}</span>
+                <span className="font-medium flex items-center gap-1.5">
+                  {order.payment_method === 'cod' ? <><Wallet className="w-4 h-4" /> Kapıda Ödeme</> : <><CreditCard className="w-4 h-4" /> Kredi Kartı</>}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">Durum</span>
-                <span className={`font-medium ${order.payment_status === 'paid' ? 'text-green-600' : 'text-yellow-600'}`}>
-                  {order.payment_status === 'paid' ? '✅ Ödendi' : '⏳ Bekliyor'}
+                <span className={`font-medium flex items-center gap-1.5 ${order.payment_status === 'paid' ? 'text-green-600' : 'text-yellow-600'}`}>
+                  {order.payment_status === 'paid' ? <><CheckCircle className="w-4 h-4" /> Ödendi</> : <><Clock3 className="w-4 h-4" /> Bekliyor</>}
                 </span>
               </div>
             </div>

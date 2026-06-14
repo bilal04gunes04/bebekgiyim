@@ -6,7 +6,7 @@ import { Pagination, Autoplay } from 'swiper/modules';
 import { productService } from '../services/productService';
 import { categoryService } from '../services/categoryService';
 import ProductCard from '../components/products/ProductCard';
-import { ArrowRight, Truck, Shield, RotateCcw, Headphones, Baby, Heart, Sparkles, Star } from 'lucide-react';
+import { ArrowRight, Truck, Shield, RotateCcw, Headphones, Baby, Heart, Sparkles, Star, Shirt, PersonStanding, Gift } from 'lucide-react';
 import 'swiper/css';
 import 'swiper/css/pagination';
 
@@ -45,8 +45,8 @@ export default function Home() {
               </Link>
             </div>
             <div className="hidden md:flex items-center justify-center">
-              <div className="w-64 h-64 bg-white/50 rounded-full flex items-center justify-center text-9xl shadow-2xl">
-                👶
+              <div className="w-64 h-64 bg-white/50 rounded-full flex items-center justify-center shadow-2xl">
+                <Baby className="w-32 h-32 text-primary-400" />
               </div>
             </div>
           </div>
@@ -106,8 +106,11 @@ export default function Home() {
                 'from-green-200 to-emerald-100'
               }`} />
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-6xl mb-3 group-hover:scale-110 transition-transform">
-                  {cat.slug?.includes('bebek') ? '👶' : cat.slug?.includes('kiz') ? '👧' : cat.slug?.includes('erkek') ? '👦' : '🧸'}
+                <span className="mb-3 group-hover:scale-110 transition-transform">
+                  {cat.slug?.includes('bebek') ? <Baby className="w-12 h-12 text-primary-400" /> :
+                   cat.slug?.includes('kiz') ? <PersonStanding className="w-12 h-12 text-pink-400" /> :
+                   cat.slug?.includes('erkek') ? <Shirt className="w-12 h-12 text-blue-400" /> :
+                   <Gift className="w-12 h-12 text-green-400" />}
                 </span>
                 <h3 className="text-xl font-bold text-gray-800">{cat.name}</h3>
                 <span className="text-sm text-gray-600 group-hover:text-primary-500 transition mt-1">Keşfet →</span>

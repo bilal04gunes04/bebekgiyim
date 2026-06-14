@@ -5,7 +5,7 @@ import { productService } from '../services/productService';
 import { useCartStore } from '../store/useCartStore';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import toast from 'react-hot-toast';
-import { Heart, Share2, Truck, Shield, RotateCcw, Minus, Plus, Star, ChevronRight } from 'lucide-react';
+import { Heart, Share2, Truck, Shield, RotateCcw, Minus, Plus, Star, ChevronRight, ImageOff } from 'lucide-react';
 
 export default function ProductDetail() {
   const { slug } = useParams();
@@ -68,9 +68,8 @@ export default function ProductDetail() {
                 className="w-full h-full object-cover"
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-8xl bg-gradient-to-br from-primary-100 to-baby-blue">
-                {product.category_slug?.includes('bebek') ? '👶' : 
-                 product.category_slug?.includes('kiz') ? '👧' : '👦'}
+              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary-100 to-baby-blue">
+                <ImageOff className="w-16 h-16 text-primary-300" />
               </div>
             )}
           </div>

@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCartStore } from '../store/useCartStore';
 import { useAuthStore } from '../store/useAuthStore';
-import { Minus, Plus, Trash2, ShoppingBag, ArrowRight, Tag } from 'lucide-react';
+import { Minus, Plus, Trash2, ShoppingBag, ArrowRight, Tag, ImageOff } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function Cart() {
@@ -48,7 +48,7 @@ export default function Cart() {
                 {item.image ? (
                   <img src={item.image} alt={item.product_name} className="w-full h-full object-cover" />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-3xl">👕</div>
+                  <div className="w-full h-full flex items-center justify-center"><ImageOff className="w-7 h-7 text-gray-300" /></div>
                 )}
               </div>
               <div className="flex-1">

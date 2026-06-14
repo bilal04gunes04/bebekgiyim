@@ -3,7 +3,7 @@ import { adminService } from '../../services/adminService';
 import api from '../../utils/api';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import Pagination from '../../components/ui/Pagination';
-import { Search, Plus, Edit2, Trash2, Eye, Package, Filter } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, Eye, Package, Filter, ImageOff, Image } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function AdminProducts() {
@@ -229,10 +229,10 @@ export default function AdminProducts() {
                     <tr key={product.id} className="hover:bg-gray-50 transition">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-xl">
+                          <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
                             {product.primary_image ? (
                               <img src={product.primary_image} alt="" className="w-full h-full object-cover rounded-lg" />
-                            ) : '👕'}
+                            ) : <ImageOff className="w-5 h-5 text-gray-300" />}
                           </div>
                           <div>
                             <p className="font-medium text-gray-800">{product.name}</p>
@@ -334,7 +334,7 @@ export default function AdminProducts() {
                       </div>
                     ) : (
                       <div className="py-4">
-                        <div className="text-4xl mb-2">🖼️</div>
+                        <Image className="w-10 h-10 text-gray-300 mb-2 mx-auto" />
                         <p className="text-sm font-medium text-gray-600">Resim yüklemek için tıklayın</p>
                         <p className="text-xs text-gray-400 mt-1">veya sürükleyip bırakın</p>
                         <p className="text-xs text-gray-300 mt-1">PNG, JPG, WEBP — maks. 5MB</p>
@@ -479,7 +479,9 @@ export default function AdminProducts() {
                 </div>
               )}
               {!editingProduct && (
-                <p className="text-xs text-gray-400 mt-2 text-center">💡 Ürünü oluşturduktan sonra düzenleme ekranından varyant ekleyebilirsiniz.</p>
+                <p className="text-xs text-gray-400 mt-2 text-center flex items-center justify-center gap-1">
+                  <Package className="w-3.5 h-3.5" /> Ürünü oluşturduktan sonra düzenleme ekranından varyant ekleyebilirsiniz.
+                </p>
               )}
           </div>
         </div>

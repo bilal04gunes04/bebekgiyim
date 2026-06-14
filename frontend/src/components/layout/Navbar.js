@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useCartStore } from '../../store/useCartStore';
-import { ShoppingBag, Heart, User, Menu, X, Search, Baby, ChevronDown, Sparkles } from 'lucide-react';
+import { ShoppingBag, Heart, User, Menu, X, Search, Baby, ChevronDown, Sparkles, Truck, Gift } from 'lucide-react';
 
 export default function Navbar() {
   const { user, logout } = useAuthStore();
@@ -25,8 +25,10 @@ export default function Navbar() {
     <nav className="bg-white shadow-sm sticky top-0 z-50">
       {/* Üst bar */}
       <div className="bg-primary-500 text-white text-xs py-2">
-        <div className="max-w-7xl mx-auto px-4 text-center">
-          🚚 250 TL üzeri kargo bedava! | 🎁 Yeni üyelere özel %10 indirim
+        <div className="max-w-7xl mx-auto px-4 flex items-center justify-center gap-2">
+          <Truck className="w-4 h-4" /> 250 TL üzeri kargo bedava!
+          <span className="mx-1">|</span>
+          <Gift className="w-4 h-4" /> Yeni üyelere özel %10 indirim
         </div>
       </div>
 
