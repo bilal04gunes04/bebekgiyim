@@ -573,21 +573,34 @@ exports.getCustomerReport = async (req, res, next) => {
 exports.updateOrderStatus = async (req, res, next) => {
     try {
         const { id } = req.params;
-        const { status } = req.body;
+        const { status, trackingNumber, note } = req.body;
 
         const validStatuses = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded'];
         if (!status || !validStatuses.includes(status)) {
             return res.status(400).json({ success: false, message: 'Geçersiz durum değeri' });
         }
 
+        // Kargoya verildiğinde shipped_at, teslim edildiğinde delivered_at otomatik doldurulur
+        let extraSet = '';
+        if (status === 'shipped') extraSet = ', shipped_at = COALESCE(shipped_at, NOW())';
+        if (status === 'delivered') extraSet = ', delivered_at = COALESCE(delivered_at, NOW())';
+
         const result = await query(
-            'UPDATE orders SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
-            [status, id]
+            `UPDATE orders
+             SET status = $1, updated_at = NOW(), tracking_number = COALESCE($2, tracking_number)${extraSet}
+             WHERE id = $3 RETURNING *`,
+            [status, trackingNumber || null, id]
         );
 
         if (result.rows.length === 0) {
             return res.status(404).json({ success: false, message: 'Sipariş bulunamadı' });
         }
+
+        // Durum geçmişine kaydet
+        await query(
+            'INSERT INTO order_status_history (order_id, status, note, created_by) VALUES ($1, $2, $3, $4)',
+            [id, status, note || null, req.user?.id || null]
+        );
 
         res.json({ success: true, data: result.rows[0], message: 'Sipariş durumu güncellendi' });
     } catch (error) {
