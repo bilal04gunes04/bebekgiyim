@@ -94,7 +94,17 @@ exports.getUsers = async (req, res, next) => {
 exports.updateUserRole = async (req, res, next) => {
     try {
         const { role } = req.body;
-        await query('UPDATE users SET role = $1 WHERE id = $2', [role, req.params.id]);
+        const validRoles = ['customer', 'admin', 'moderator'];
+        if (!validRoles.includes(role)) {
+            return res.status(400).json({ success: false, message: 'Geçersiz rol değeri' });
+        }
+        if (parseInt(req.params.id) === req.user.id && role !== 'admin') {
+            return res.status(400).json({ success: false, message: 'Kendi admin yetkinizi kaldıramazsınız' });
+        }
+        const result = await query('UPDATE users SET role = $1 WHERE id = $2 RETURNING id', [role, req.params.id]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Kullanıcı bulunamadı' });
+        }
         res.json({ success: true, message: 'Kullanıcı rolü güncellendi' });
     } catch (error) {
         next(error);
@@ -128,7 +138,21 @@ exports.getAllOrders = async (req, res, next) => {
         params.push(limit, offset);
 
         const result = await query(sql, params);
-        res.json({ success: true, data: result.rows });
+
+        // Toplam kayıt sayısı (aynı filtrelerle, limit/offset hariç)
+        let countSql = `SELECT COUNT(*) FROM orders o LEFT JOIN users u ON o.user_id = u.id WHERE 1=1`;
+        const countParams = [];
+        let countIndex = 1;
+        if (status) { countSql += ` AND o.status = $${countIndex++}`; countParams.push(status); }
+        if (search) { countSql += ` AND (o.order_number ILIKE $${countIndex++} OR u.email ILIKE $${countIndex++} OR u.first_name ILIKE $${countIndex++})`; countParams.push(`%${search}%`, `%${search}%`, `%${search}%`); }
+        const countResult = await query(countSql, countParams);
+        const total = parseInt(countResult.rows[0].count);
+
+        res.json({
+            success: true,
+            data: result.rows,
+            pagination: { page, limit, total, totalPages: Math.ceil(total / limit) }
+        });
     } catch (error) {
         next(error);
     }
@@ -164,7 +188,23 @@ exports.getAllProducts = async (req, res, next) => {
         params.push(limit, offset);
 
         const result = await query(sql, params);
-        res.json({ success: true, data: result.rows });
+
+        // Toplam kayıt sayısı (aynı filtrelerle, limit/offset hariç)
+        let countSql = `SELECT COUNT(*) FROM products p WHERE 1=1`;
+        const countParams = [];
+        let countIndex = 1;
+        if (search) { countSql += ` AND (p.name ILIKE $${countIndex++} OR p.sku ILIKE $${countIndex++})`; countParams.push(`%${search}%`, `%${search}%`); }
+        if (status === 'active') { countSql += ` AND p.is_active = true`; }
+        if (status === 'inactive') { countSql += ` AND p.is_active = false`; }
+        if (status === 'low_stock') { countSql += ` AND p.stock_quantity <= 10`; }
+        const countResult = await query(countSql, countParams);
+        const total = parseInt(countResult.rows[0].count);
+
+        res.json({
+            success: true,
+            data: result.rows,
+            pagination: { page, limit, total, totalPages: Math.ceil(total / limit) }
+        });
     } catch (error) {
         next(error);
     }
@@ -267,7 +307,17 @@ exports.getAllReviews = async (req, res, next) => {
 // @route   PUT /api/admin/reviews/:id/approve
 exports.approveReview = async (req, res, next) => {
     try {
-        await query('UPDATE reviews SET is_approved = true WHERE id = $1', [req.params.id]);
+        const result = await query('UPDATE reviews SET is_approved = true WHERE id = $1 RETURNING product_id', [req.params.id]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Yorum bulunamadı' });
+        }
+        const productId = result.rows[0].product_id;
+        await query(
+            `UPDATE products SET rating_avg = (SELECT AVG(rating) FROM reviews WHERE product_id = $1 AND is_approved = true),
+             rating_count = (SELECT COUNT(*) FROM reviews WHERE product_id = $1 AND is_approved = true)
+             WHERE id = $1`,
+            [productId]
+        );
         res.json({ success: true, message: 'Yorum onaylandı' });
     } catch (error) {
         next(error);
@@ -278,7 +328,17 @@ exports.approveReview = async (req, res, next) => {
 // @route   DELETE /api/admin/reviews/:id
 exports.deleteReview = async (req, res, next) => {
     try {
-        await query('DELETE FROM reviews WHERE id = $1', [req.params.id]);
+        const result = await query('DELETE FROM reviews WHERE id = $1 RETURNING product_id', [req.params.id]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Yorum bulunamadı' });
+        }
+        const productId = result.rows[0].product_id;
+        await query(
+            `UPDATE products SET rating_avg = COALESCE((SELECT AVG(rating) FROM reviews WHERE product_id = $1 AND is_approved = true), 0),
+             rating_count = (SELECT COUNT(*) FROM reviews WHERE product_id = $1 AND is_approved = true)
+             WHERE id = $1`,
+            [productId]
+        );
         res.json({ success: true, message: 'Yorum silindi' });
     } catch (error) {
         next(error);
@@ -301,12 +361,18 @@ exports.getAllCoupons = async (req, res, next) => {
 exports.createCoupon = async (req, res, next) => {
     try {
         const { code, type, value, minPurchase, maxDiscount, usageLimit, startDate, endDate } = req.body;
+        if (!code || !type || value === undefined) {
+            return res.status(400).json({ success: false, message: 'Kod, tip ve değer alanları zorunludur' });
+        }
         const result = await query(
             'INSERT INTO coupons (code, type, value, min_purchase, max_discount, usage_limit, start_date, end_date) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
             [code.toUpperCase(), type, value, minPurchase || 0, maxDiscount || null, usageLimit || null, startDate || null, endDate || null]
         );
         res.status(201).json({ success: true, data: result.rows[0] });
     } catch (error) {
+        if (error.code === '23505') {
+            return res.status(400).json({ success: false, message: 'Bu kupon kodu zaten kullanılıyor' });
+        }
         next(error);
     }
 };
@@ -349,8 +415,8 @@ exports.getAllBanners = async (req, res, next) => {
 // @route   POST /api/admin/banners
 exports.createBanner = async (req, res, next) => {
     try {
-        const { title, subtitle, linkUrl, position, sortOrder, startDate, endDate } = req.body;
-        const imageUrl = req.file ? `/uploads/banners/${req.file.filename}` : null;
+        const { title, subtitle, linkUrl, position, sortOrder, startDate, endDate, imageUrl: bodyImageUrl } = req.body;
+        const imageUrl = req.file ? `/uploads/banners/${req.file.filename}` : (bodyImageUrl || null);
 
         const result = await query(
             'INSERT INTO banners (title, subtitle, image_url, link_url, position, sort_order, start_date, end_date) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
@@ -380,12 +446,20 @@ exports.updateBanner = async (req, res, next) => {
         if (startDate !== undefined) { updates.push(`start_date = $${index++}`); values.push(startDate); }
         if (endDate !== undefined) { updates.push(`end_date = $${index++}`); values.push(endDate); }
         if (req.file) { updates.push(`image_url = $${index++}`); values.push(`/uploads/banners/${req.file.filename}`); }
+        else if (req.body.imageUrl !== undefined) { updates.push(`image_url = $${index++}`); values.push(req.body.imageUrl); }
+
+        if (updates.length === 0) {
+            return res.status(400).json({ success: false, message: 'Güncellenecek alan bulunamadı' });
+        }
 
         values.push(req.params.id);
         const result = await query(
             `UPDATE banners SET ${updates.join(', ')} WHERE id = $${index} RETURNING *`,
             values
         );
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Banner bulunamadı' });
+        }
         res.json({ success: true, data: result.rows[0] });
     } catch (error) {
         next(error);
@@ -419,14 +493,20 @@ exports.getAllPages = async (req, res, next) => {
 exports.createPage = async (req, res, next) => {
     try {
         const { title, content, metaTitle, metaDescription } = req.body;
+        if (!title) {
+            return res.status(400).json({ success: false, message: 'Başlık zorunludur' });
+        }
         const slug = slugify(title, { lower: true, strict: true });
 
         const result = await query(
             'INSERT INTO pages (title, slug, content, meta_title, meta_description) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-            [title, slug, content, metaTitle || null, metaDescription || null]
+            [title, slug, content || '', metaTitle || null, metaDescription || null]
         );
         res.status(201).json({ success: true, data: result.rows[0] });
     } catch (error) {
+        if (error.code === '23505') {
+            return res.status(400).json({ success: false, message: 'Bu başlıkta bir sayfa zaten mevcut' });
+        }
         next(error);
     }
 };
@@ -446,11 +526,18 @@ exports.updatePage = async (req, res, next) => {
         if (metaDescription !== undefined) { updates.push(`meta_description = $${index++}`); values.push(metaDescription); }
         if (isActive !== undefined) { updates.push(`is_active = $${index++}`); values.push(isActive); }
 
+        if (updates.length === 0) {
+            return res.status(400).json({ success: false, message: 'Güncellenecek alan bulunamadı' });
+        }
+
         values.push(req.params.id);
         const result = await query(
             `UPDATE pages SET ${updates.join(', ')}, updated_at = NOW() WHERE id = $${index} RETURNING *`,
             values
         );
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Sayfa bulunamadı' });
+        }
         res.json({ success: true, data: result.rows[0] });
     } catch (error) {
         next(error);

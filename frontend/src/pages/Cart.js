@@ -2,11 +2,11 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCartStore } from '../store/useCartStore';
 import { useAuthStore } from '../store/useAuthStore';
-import { Minus, Plus, Trash2, ShoppingBag, ArrowRight, Tag, ImageOff } from 'lucide-react';
+import { Minus, Plus, Trash2, ShoppingBag, ArrowRight, Tag, ImageOff, X, CheckCircle2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function Cart() {
-  const { items, summary, updateQuantity, removeItem, clearCart, applyCoupon } = useCartStore();
+  const { items, summary, updateQuantity, removeItem, clearCart, applyCoupon, coupon, removeCoupon } = useCartStore();
   const { user } = useAuthStore();
   const navigate = useNavigate();
   const [couponCode, setCouponCode] = React.useState('');
@@ -117,18 +117,29 @@ export default function Cart() {
 
           {/* Kupon */}
           <div className="mb-4">
-            <div className="flex gap-2">
-              <input
-                type="text"
-                placeholder="Kupon kodu"
-                value={couponCode}
-                onChange={(e) => setCouponCode(e.target.value)}
-                className="flex-1 px-3 py-2 border rounded-lg text-sm"
-              />
-              <button onClick={handleApplyCoupon} className="px-4 py-2 bg-gray-800 text-white rounded-lg text-sm hover:bg-gray-900 transition">
-                <Tag className="w-4 h-4" />
-              </button>
-            </div>
+            {coupon ? (
+              <div className="flex items-center justify-between gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-lg text-sm">
+                <span className="flex items-center gap-2 text-green-700 font-medium">
+                  <CheckCircle2 className="w-4 h-4" /> {coupon.code} uygulandı
+                </span>
+                <button onClick={removeCoupon} className="text-green-600 hover:text-green-800">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Kupon kodu"
+                  value={couponCode}
+                  onChange={(e) => setCouponCode(e.target.value)}
+                  className="flex-1 px-3 py-2 border rounded-lg text-sm"
+                />
+                <button onClick={handleApplyCoupon} className="px-4 py-2 bg-gray-800 text-white rounded-lg text-sm hover:bg-gray-900 transition">
+                  <Tag className="w-4 h-4" />
+                </button>
+              </div>
+            )}
           </div>
 
           <button

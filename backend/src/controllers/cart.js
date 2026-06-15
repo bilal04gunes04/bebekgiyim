@@ -164,6 +164,9 @@ exports.clearCart = async (req, res, next) => {
 exports.applyCoupon = async (req, res, next) => {
     try {
         const { code } = req.body;
+        if (!code) {
+            return res.status(400).json({ success: false, message: 'Kupon kodu zorunludur' });
+        }
 
         const couponResult = await query(
             `SELECT * FROM coupons 
@@ -187,6 +190,10 @@ exports.applyCoupon = async (req, res, next) => {
         );
         const subtotal = parseFloat(cartResult.rows[0].subtotal || 0);
 
+        if (subtotal === 0) {
+            return res.status(400).json({ success: false, message: 'Sepetiniz boş' });
+        }
+
         if (subtotal < parseFloat(coupon.min_purchase)) {
             return res.status(400).json({ success: false, message: `Bu kupon için minimum ${coupon.min_purchase} TL alışveriş yapmalısınız` });
         }
@@ -196,19 +203,20 @@ exports.applyCoupon = async (req, res, next) => {
             discountAmount = subtotal * (coupon.value / 100);
         } else if (coupon.type === 'fixed_amount') {
             discountAmount = coupon.value;
+        } else if (coupon.type === 'free_shipping') {
+            // Kargo ücreti, sipariş oluşturulurken ayrıca düşülür (createOrder).
+            // Burada sadece kuponun geçerli olduğunu onaylıyoruz.
+            discountAmount = 0;
         }
 
         if (coupon.max_discount && discountAmount > parseFloat(coupon.max_discount)) {
             discountAmount = parseFloat(coupon.max_discount);
         }
 
-        // Kuponu sepete uygula
-        await query(
-            'UPDATE cart_items SET coupon_code = $1, discount_amount = $2 WHERE user_id = $3',
-            [code, discountAmount, req.user.id]
-        );
-
-        res.json({ success: true, coupon: { code, discountAmount: discountAmount.toFixed(2) } });
+        // Not: Kupon kalıcı olarak sepete yazılmaz. Doğrulanan kupon kodu ve
+        // indirim miktarı frontend tarafında (state) tutulur ve sipariş
+        // oluşturulurken (POST /api/orders) couponCode olarak gönderilir.
+        res.json({ success: true, coupon: { code: coupon.code, type: coupon.type, value: coupon.value, discountAmount: discountAmount.toFixed(2) } });
     } catch (error) {
         next(error);
     }

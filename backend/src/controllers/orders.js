@@ -36,8 +36,16 @@ exports.createOrder = async (req, res, next) => {
 
         // Stok kontrolü
         for (const item of cartResult.rows) {
-            if (item.variant_id && item.variant_stock < item.quantity) {
-                return res.status(400).json({ success: false, message: `${item.product_name} için yeterli stok bulunmamaktadır` });
+            if (item.variant_id) {
+                if (item.variant_stock < item.quantity) {
+                    return res.status(400).json({ success: false, message: `${item.product_name} için yeterli stok bulunmamaktadır` });
+                }
+            } else {
+                const stockResult = await query('SELECT stock_quantity FROM products WHERE id = $1', [item.product_id]);
+                const productStock = stockResult.rows[0]?.stock_quantity ?? 0;
+                if (productStock < item.quantity) {
+                    return res.status(400).json({ success: false, message: `${item.product_name} için yeterli stok bulunmamaktadır` });
+                }
             }
         }
 
@@ -46,7 +54,7 @@ exports.createOrder = async (req, res, next) => {
 
         const settingsResult = await query("SELECT value FROM settings WHERE key = 'free_shipping_threshold'");
         const freeShippingThreshold = parseFloat(settingsResult.rows[0]?.value || 250);
-        const shippingCost = subtotal >= freeShippingThreshold ? 0 : 29.90;
+        let shippingCost = subtotal >= freeShippingThreshold ? 0 : 29.90;
 
         // Kupon kontrolü
         let discountAmount = 0;
@@ -59,8 +67,10 @@ exports.createOrder = async (req, res, next) => {
                 const coupon = couponResult.rows[0];
                 if (coupon.type === 'percentage') {
                     discountAmount = subtotal * (coupon.value / 100);
-                } else {
+                } else if (coupon.type === 'fixed_amount') {
                     discountAmount = coupon.value;
+                } else if (coupon.type === 'free_shipping') {
+                    shippingCost = 0;
                 }
                 if (coupon.max_discount && discountAmount > parseFloat(coupon.max_discount)) {
                     discountAmount = parseFloat(coupon.max_discount);

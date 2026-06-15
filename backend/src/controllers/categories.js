@@ -66,16 +66,23 @@ exports.getCategory = async (req, res, next) => {
 exports.createCategory = async (req, res, next) => {
     try {
         const { name, description, parentId, sortOrder } = req.body;
+        if (!name) {
+            return res.status(400).json({ success: false, message: 'Kategori adı zorunludur' });
+        }
         const slug = slugify(name, { lower: true, strict: true });
-        const imageUrl = req.file ? `/uploads/categories/${req.file.filename}` : null;
+        const imageUrl = req.file ? `/uploads/categories/${req.file.filename}` : (req.body.imageUrl || null);
+        const safeParentId = parentId || null;
 
         const result = await query(
             'INSERT INTO categories (name, slug, description, parent_id, image_url, sort_order) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-            [name, slug, description || null, parentId || null, imageUrl, sortOrder || 0]
+            [name, slug, description || null, safeParentId, imageUrl, sortOrder || 0]
         );
 
         res.status(201).json({ success: true, data: result.rows[0] });
     } catch (error) {
+        if (error.code === '23505') {
+            return res.status(400).json({ success: false, message: 'Bu isimde bir kategori zaten mevcut' });
+        }
         next(error);
     }
 };
@@ -91,10 +98,11 @@ exports.updateCategory = async (req, res, next) => {
 
         if (name) { updates.push(`name = $${index++}`); values.push(name); }
         if (description !== undefined) { updates.push(`description = $${index++}`); values.push(description); }
-        if (parentId !== undefined) { updates.push(`parent_id = $${index++}`); values.push(parentId); }
+        if (parentId !== undefined) { updates.push(`parent_id = $${index++}`); values.push(parentId || null); }
         if (sortOrder !== undefined) { updates.push(`sort_order = $${index++}`); values.push(sortOrder); }
         if (isActive !== undefined) { updates.push(`is_active = $${index++}`); values.push(isActive); }
         if (req.file) { updates.push(`image_url = $${index++}`); values.push(`/uploads/categories/${req.file.filename}`); }
+        else if (req.body.imageUrl !== undefined) { updates.push(`image_url = $${index++}`); values.push(req.body.imageUrl); }
 
         if (updates.length === 0) {
             return res.status(400).json({ success: false, message: 'Güncellenecek alan bulunamadı' });
@@ -105,6 +113,10 @@ exports.updateCategory = async (req, res, next) => {
             `UPDATE categories SET ${updates.join(', ')} WHERE id = $${index} RETURNING *`,
             values
         );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Kategori bulunamadı' });
+        }
 
         res.json({ success: true, data: result.rows[0] });
     } catch (error) {

@@ -16,6 +16,8 @@ import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import Profile from './pages/Profile';
 import Orders from './pages/Orders';
 import OrderDetail from './pages/OrderDetail';
@@ -55,6 +57,8 @@ function App() {
           <Route path="/odeme" element={<Checkout />} />
           <Route path="/giris" element={<Login />} />
           <Route path="/kayit" element={<Register />} />
+          <Route path="/sifremi-unuttum" element={<ForgotPassword />} />
+          <Route path="/sifre-sifirla" element={<ResetPassword />} />
           <Route path="/profil" element={<Profile />} />
           <Route path="/siparislerim" element={<Orders />} />
           <Route path="/siparis/:id" element={<OrderDetail />} />

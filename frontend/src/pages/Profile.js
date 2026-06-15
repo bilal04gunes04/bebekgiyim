@@ -11,6 +11,8 @@ export default function Profile() {
   const [activeTab, setActiveTab] = useState('info');
   const [addresses, setAddresses] = useState([]);
   const [showAddressForm, setShowAddressForm] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+  const [passwordLoading, setPasswordLoading] = useState(false);
   const [addressForm, setAddressForm] = useState({
     title: '', fullName: '', phone: '', city: '', district: '', neighborhood: '', addressLine: '', postalCode: '', isDefault: false
   });
@@ -90,6 +92,7 @@ export default function Profile() {
   const tabs = [
     { id: 'info', label: 'Profil Bilgileri', icon: User },
     { id: 'addresses', label: 'Adreslerim', icon: MapPin },
+    { id: 'password', label: 'Şifre Değiştir', icon: Star },
     { id: 'orders', label: 'Siparişlerim', icon: ShoppingBag },
     { id: 'wishlist', label: 'Favorilerim', icon: Heart },
   ];
@@ -247,6 +250,41 @@ export default function Profile() {
                   ))
                 )}
               </div>
+            </div>
+          )}
+
+          {activeTab === 'password' && (
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <h2 className="text-xl font-bold mb-6">Şifre Değiştir</h2>
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                if (passwordForm.newPassword.length < 6) { toast.error('Yeni şifre en az 6 karakter olmalı'); return; }
+                if (passwordForm.newPassword !== passwordForm.confirmPassword) { toast.error('Yeni şifreler eşleşmiyor'); return; }
+                setPasswordLoading(true);
+                try {
+                  await api.put('/auth/change-password', { currentPassword: passwordForm.currentPassword, newPassword: passwordForm.newPassword });
+                  toast.success('Şifreniz başarıyla güncellendi');
+                  setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+                } catch (error) {
+                  toast.error(error.response?.data?.message || 'Şifre güncellenemedi');
+                } finally { setPasswordLoading(false); }
+              }} className="space-y-4 max-w-md">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Mevcut Şifre</label>
+                  <input type="password" value={passwordForm.currentPassword} onChange={(e) => setPasswordForm(p => ({ ...p, currentPassword: e.target.value }))} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-400 outline-none" placeholder="••••••••" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Yeni Şifre</label>
+                  <input type="password" value={passwordForm.newPassword} onChange={(e) => setPasswordForm(p => ({ ...p, newPassword: e.target.value }))} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-400 outline-none" placeholder="En az 6 karakter" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Yeni Şifre (Tekrar)</label>
+                  <input type="password" value={passwordForm.confirmPassword} onChange={(e) => setPasswordForm(p => ({ ...p, confirmPassword: e.target.value }))} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-400 outline-none" placeholder="••••••••" />
+                </div>
+                <button type="submit" disabled={passwordLoading} className="btn-primary py-2 px-6 disabled:opacity-50">
+                  {passwordLoading ? 'Güncelleniyor...' : 'Şifreyi Güncelle'}
+                </button>
+              </form>
             </div>
           )}
         </div>

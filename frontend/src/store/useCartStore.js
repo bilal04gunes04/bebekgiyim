@@ -16,10 +16,19 @@ export const useCartStore = create((set, get) => ({
   fetchCart: async () => {
     try {
       const response = await api.get('/cart');
+      const summary = response.data.data.summary || get().summary;
+      const coupon = get().coupon;
+
+      // Eğer kupon uygulanmışsa, yeni alt toplam üzerinden tekrar hesapla
+      if (coupon) {
+        const discount = parseFloat(coupon.discountAmount) || 0;
+        summary.discountAmount = discount;
+        summary.total = Math.max(0, parseFloat(summary.subtotal) + parseFloat(summary.shippingCost) - discount);
+      }
+
       set({
         items: response.data.data.items || [],
-        summary: response.data.data.summary || get().summary,
-        coupon: response.data.data.coupon || null,
+        summary,
       });
     } catch (error) {
       console.error('Sepet yüklenemedi:', error);
@@ -69,11 +78,18 @@ export const useCartStore = create((set, get) => ({
   applyCoupon: async (code) => {
     try {
       const response = await api.post('/cart/coupon', { code });
+      const coupon = response.data.coupon;
+      set({ coupon });
       await get().fetchCart();
-      return { success: true, coupon: response.data.coupon };
+      return { success: true, coupon };
     } catch (error) {
       return { success: false, error: error.response?.data?.message };
     }
+  },
+
+  removeCoupon: () => {
+    set({ coupon: null });
+    get().fetchCart();
   },
 
   getItemCount: () => {

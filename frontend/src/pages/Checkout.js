@@ -7,7 +7,7 @@ import { CreditCard, Truck, MapPin, ChevronRight, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function Checkout() {
-  const { items, summary, clearCart } = useCartStore();
+  const { items, summary, clearCart, coupon } = useCartStore();
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
@@ -48,7 +48,7 @@ export default function Checkout() {
         shippingAddressId: parseInt(orderData.shippingAddressId),
         paymentMethod: orderData.paymentMethod,
         notes: orderData.notes,
-        couponCode: orderData.couponCode,
+        couponCode: coupon?.code || '',
       });
       toast.success('Siparişiniz alındı!');
       clearCart();

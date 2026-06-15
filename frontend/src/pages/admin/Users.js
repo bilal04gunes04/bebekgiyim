@@ -30,7 +30,7 @@ export default function AdminUsers() {
       await adminService.updateUserRole(id, newRole);
       toast.success('Rol güncellendi');
       fetchUsers();
-    } catch (error) { toast.error('Güncelleme başarısız'); }
+    } catch (error) { toast.error(error.response?.data?.message || 'Güncelleme başarısız'); }
   };
 
   return (
