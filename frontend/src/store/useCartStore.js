@@ -21,9 +21,9 @@ export const useCartStore = create((set, get) => ({
 
       // Eğer kupon uygulanmışsa, yeni alt toplam üzerinden tekrar hesapla
       if (coupon) {
-        const discount = parseFloat(coupon.discountAmount) || 0;
+        const discount = parseFloat(coupon.discountAmount || coupon.discount_amount || 0) || 0;
         summary.discountAmount = discount;
-        summary.total = Math.max(0, parseFloat(summary.subtotal) + parseFloat(summary.shippingCost) - discount);
+        summary.total = Math.max(0, (parseFloat(summary.subtotal) || 0) + (parseFloat(summary.shippingCost) || 0) - discount);
       }
 
       set({
@@ -78,7 +78,10 @@ export const useCartStore = create((set, get) => ({
   applyCoupon: async (code) => {
     try {
       const response = await api.post('/cart/coupon', { code });
-      const coupon = response.data.coupon;
+      const coupon = {
+        ...response.data.coupon,
+        discountAmount: parseFloat(response.data.coupon.discountAmount) || 0,
+      };
       set({ coupon });
       await get().fetchCart();
       return { success: true, coupon };
